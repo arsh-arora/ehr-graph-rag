@@ -1,0 +1,8 @@
+evaluate
+rouge_score
+openai
+psycopg2-binary
+neo4j
+qdrant-client
+sentence-transformers
+torch

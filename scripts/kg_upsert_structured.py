@@ -61,13 +61,15 @@ def main(ep_file=None):
             """, pid=r["patient"], eid=r["ep_id"])
 
         # ---- 2) Encounters ----
+        # Link encounters to episodes if the encounter's time window overlaps
+        # COALESCE(c.stop, c.start) handles records with null stop times.
         sql_enc = """
             SELECT c.id, c.patient, c.start, c.stop, e.ep_id
             FROM coh.encounters c
             JOIN coh.episodes e
               ON e.patient = c.patient
-             AND c.start >= e.t0
-             AND (e.t1 IS NULL OR c.stop <= e.t1)
+             AND c.start BETWEEN e.t0 AND e.t1
+             AND COALESCE(c.stop, c.start) BETWEEN e.t0 AND e.t1
         """
         params = ()
         if eps:
@@ -87,6 +89,7 @@ def main(ep_file=None):
             """, eid=r["ep_id"], id=r["id"], t0=r["start"], t1=r["stop"])
 
         # ---- 3) Medications ----
+        # Link medications to episodes if the medication's time window overlaps
         sql_med = """
             SELECT e.ep_id, m.patient, m.start, m.stop,
                    COALESCE(m.description, m.code) AS drug,
@@ -94,8 +97,8 @@ def main(ep_file=None):
             FROM coh.medications m
             JOIN coh.episodes e
               ON e.patient = m.patient
-             AND m.start >= e.t0
-             AND (e.t1 IS NULL OR m.stop <= e.t1)
+             AND m.start BETWEEN e.t0 AND e.t1
+             AND COALESCE(m.stop, m.start) BETWEEN e.t0 AND e.t1
             WHERE COALESCE(m.description, m.code) IS NOT NULL
         """
         params = ()
